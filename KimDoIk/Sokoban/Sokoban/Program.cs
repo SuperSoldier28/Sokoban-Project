@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel;
+using System.Dynamic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Sokoban
 {
@@ -11,17 +13,156 @@ namespace Sokoban
         Down
     }
 
-    //// 기호 상수 정의
-    //const int DIRECTION_NONE = 0;
-    //const int DIRECTION_LEFT = 1;
-    //const int DIRECTION_RIGHT = 2;
-    //const int DIRECTION_UP = 3;
-    //const int DIRECTION_DOWN = 4;
+    class Player
+    {
+        // private는 class Player 안에서만 사용이 가능합니다.
+        private int playerx;
+        private int playery;
+        private string image;
+        private Direction direction;
 
-    class Program
+        // 접근자(Getter) & 설정자(Setter)
+        // 접근자 : 데이터에 접근하는 메소드 => 외부에서 내 데이터 공개
+        // 설정자 : 데이터를 설정하는 메소드 => 외부에 의해서 내 데이터 수정 가능
+
+        // 접근자는 외부에 데이터를 열어주고, 설정자는 열어준 데이터를 수정할 수 있게끔 해줍니다.
+
+        /// <summary>
+        /// 생성자
+        /// </summary>
+        public Player()
+        {
+            playerx = 0;
+            playery = 0;
+            image = "P";
+            direction = Direction.None;
+        }
+
+        public int GetX() => playerx; // 외부에서 접근해야 되기 때문에 public을 사용합니다.
+        public int GetY() => playery; // 외부에서 접근해야 되기 때문에 public을 사용합니다.
+
+        public void SetX(int x) => playerx = x; // 외부에서 접근해야 되기 때문에 public을 사용합니다.
+        public void SetY(int y) => playery = y; // 외부에서 접근해야 되기 때문에 public을 사용합니다.
+
+        public Direction GetPX() => direction;
+
+
+
+        /// <summary>
+        /// 플레이어를 그려준다.
+        /// </summary>
+        public void Render()
+        {
+            Console.SetCursorPosition(playerx, playery);
+            Console.Write(image);
+        }
+        // 1. Method
+        // Move
+
+        /// <summary>
+        /// 플레이어를 움직여줍니다.
+        /// </summary>
+        /// <param name="key"></param>
+        public void PlayerMove(ConsoleKey key)
+        {
+            if (key == ConsoleKey.LeftArrow)
+            {
+                playerx = Math.Max(0, playerx - 1);
+                direction = Direction.Left;
+            }
+            if (key == ConsoleKey.RightArrow)
+            {
+                playerx = Math.Min(playerx + 1, 23);
+                direction = Direction.Right;
+            }
+            if (key == ConsoleKey.UpArrow)
+            {
+                playery = Math.Max(0, playery - 1);
+                direction = Direction.Up;
+            }
+            if (key == ConsoleKey.DownArrow)
+            {
+                playery = Math.Min(23, playery + 1);
+                direction = Direction.Down;
+            }
+        }
+        // Render
+
+
+        // 2. Data 
+    }
+
+    class Wall
+    {
+        private int wallX;
+        private int wallY;
+        private string image;
+        /// <summary>
+        /// 생성자
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        public Wall(int x, int y)
+        {
+            wallX = x;
+            wallY = y;
+            image = "W";
+        }
+
+        public void Render()
+        {
+            Console.SetCursorPosition(wallX, wallY);
+            Console.Write(image);
+        }
+
+        public void WallMove(Player player)
+        {
+            int playerX = player.GetX(); // playerX에 오픈된 GetX를 넣어줍니다.
+
+            int playerY = player.GetY(); // playerX에 오픈된 GetY를 넣어줍니다.
+
+            Direction _moveDirection = player.GetPX();
+
+            if (playerX == wallX && playerY == wallY)
+            {
+                switch (_moveDirection)
+                {
+                    case Direction.Left:
+                        playerX = wallX + 1;
+                        break;
+
+                    case Direction.Right:
+                        playerX = wallX - 1;
+                        break;
+
+                    case Direction.Up:
+                        playerY = wallY + 1;
+                        break;
+
+                    case Direction.Down:
+                        playerY = wallY - 1;
+                        break;
+
+                    default:
+                        Console.Clear();
+                        Console.WriteLine($"[Error] 플레이어 이동 방향 데이터가 오류 입니다. : {_moveDirection}");
+
+                        return;
+                }
+            }
+
+            player.SetX(playerX); // 변경된 playerX 값을 바꿔주도록 설정해줍니다.
+            player.SetY(playerY); // 변경된 playerY 값을 바꿔주도록 설정해줍니다.
+
+        }
+    }
+
+    class Sokoban
     {
         static void Main()
         {
+
+
             // 초기 세팅
             Console.ResetColor();                                // 컬러를 초기화하는 것.
             Console.CursorVisible = false;                       // 커서 숨기기
@@ -38,17 +179,83 @@ namespace Sokoban
             // 벽의 개수를 설정합니다.
             const int WALL_COUNT = 3;
 
-            // 플레이어 위치를 저장하기 위한 변수
-            const int PLAYERX = 0;
-            const int PLAYERY = 0;
+            // 플레이어 객체 생성자 호출
+            Player player = new Player();
 
-            int playerX = PLAYERX;
-            int playerY = PLAYERY;
+            // 벽 객체 생성자 호출
+            Wall[] wall = new Wall[WALL_COUNT];
+            wall[0] = new Wall(6, 6);
+            wall[1] = new Wall(8, 15);
+            wall[2] = new Wall(9, 8);
 
             // 플레이어의 이동 방향을 저장하기 위한 변수
             Direction playerMoveDirection = Direction.None;
 
-            // 첫 번째 박스, 두 번째 박스 위치를 저장하기 위한 변수를 배열로 작성
+
+
+            // 게임 루프 구성
+            while (true)
+            {
+                //-----------------------Render--------------------- // 플레이어가 알 수 있게 화면을 그려준다.
+                Render();
+
+                //-----------------------ProcessInput--------------------- // 마지막 호출 이후 발생한 모든 사용자 입력을 처리합니다.
+                ConsoleKey key = Console.ReadKey().Key;
+
+                //------------------------Update-------------------------// 게임을 업데이트합니다.
+
+                // 플레이어를 움직여줍니다.
+                player.PlayerMove(key);
+
+                for (int i = 0; i < WALL_COUNT; i++)
+                {
+                    wall[i].WallMove(player);
+                }
+
+
+            }
+
+            #region Render 모듈화
+            //Render 모듈화
+            void Render()
+            {
+                Console.Clear();
+
+                // 플레이어
+                player.Render();
+
+
+                // 벽
+                for (int i = 0; i < WALL_COUNT; i++)
+                {
+                    wall[i].Render();
+                }
+            }
+
+            // 오브젝트를 그립니다.
+            void RenderObject(int x, int y, string image)
+            {
+                Console.SetCursorPosition(x, y);
+                Console.Write(image);
+            }
+
+            void RenderObjectColor(int x, int y, string image, ConsoleColor color)
+            {
+                ConsoleColor _Color1 = Console.ForegroundColor;
+
+                Console.ForegroundColor = color;
+                Console.SetCursorPosition(x, y);
+                Console.Write(image);
+
+                Console.ForegroundColor = _Color1;
+            }
+            #endregion
+        }
+    }
+}
+
+/*
+  // 첫 번째 박스, 두 번째 박스 위치를 저장하기 위한 변수를 배열로 작성
             int[] boxPositionX = { 5, 11 };
             int[] boxPositionY = { 7, 13 };
 
@@ -67,94 +274,9 @@ namespace Sokoban
             // 현재 내가 밀고 있는 박스가 몇번째 박스인지 알게 해주는 역할을 합니다.
             int pushedBoxId = 0;
 
-            // 게임 루프 구성
-            while (true)
-            {
-                //-----------------------Render--------------------- // 플레이어가 알 수 있게 화면을 그려준다.
-                // 이전 프레임을 지운다. 이전 화면을 지워야 지금의 화면을 그려줄 수 있다.
-                Console.Clear();
+<23.01.12. (목)>
 
-                // 플레이어를 그린다.
-                Console.SetCursorPosition(playerX, playerY);
-                Console.Write("P");
-
-                // 박스를 반복해서 그려준다. 반복 횟수를 알기 때문에 for문을 사용한다.
-                for (int i = 0; i < BOX_COUNT; i++)
-                {
-                    Console.SetCursorPosition(boxPositionX[i], boxPositionY[i]);
-                    Console.Write("B");
-                }
-
-                #region 골 지점 생성 및 박스가 골 지점 안에 들어 갔을 때 ★로 바뀌게 만들어주기
-                // 골을 반복해서 그려준다. 반복 횟수를 알기 때문에 for문을 사용한다.
-                for (int i = 0; i < GOAL_COUNT; i++)
-                {
-                    Console.SetCursorPosition(goalPositionX[i], goalPositionY[i]);
-
-                    // 업데이트 된 인덱스값이 true라면 ★을 출력한다. 
-                    if (goalPicture[i] == true)
-                    {
-                        Console.Write('★');
-                    }
-                    else // 업데이트 된 인덱스 값이 false라면 G를 출력한다.
-                    {
-                        Console.Write("G");
-                    }
-
-                }
-                #endregion
-
-
-                //// 박스가 골 지점에 도달 했을 때 이미지가 바뀌도록 그려준다.
-                //for (int i = 0; i < GOAL_COUNT; i++)
-                //{
-                //    for(int k = 0; k < BOX_COUNT; k++)
-                //    {
-                //        if (boxPositionX[i] == goalPositionX[k] && boxPositionY[i] == goalPositionY[k])
-                //        {
-                //            Console.SetCursorPosition(goalPositionX[k], goalPositionY[k]);
-                //            Console.Write('★');
-                //        }
-                //    }
-                //}
-
-                // 벽을 그린다.
-                for(int i = 0; i <WALL_COUNT; i++)
-                {
-                    Console.SetCursorPosition(wallX[i], wallY[i]);
-                    Console.Write("W");
-                }
-                
-
-
-                //-----------------------ProcessInput--------------------- // 마지막 호출 이후 발생한 모든 사용자 입력을 처리합니다.
-                ConsoleKey key = Console.ReadKey().Key;
-
-                //-----------------------Update--------------------- // 게임 데이터를 업데이트를 시켜주는 것 입니다.
-
-                // 플레이어를 움직여줍니다.
-                if (key == ConsoleKey.LeftArrow)
-                {
-                    playerX = Math.Max(0, playerX - 1);
-                    playerMoveDirection = Direction.Left;
-                }
-                if (key == ConsoleKey.RightArrow)
-                {
-                    playerX = Math.Min(playerX + 1, 23);
-                    playerMoveDirection = Direction.Right;
-                }
-                if (key == ConsoleKey.UpArrow)
-                {
-                    playerY = Math.Max(0, playerY - 1);
-                    playerMoveDirection = Direction.Up;
-                }
-                if (key == ConsoleKey.DownArrow)
-                {
-                    playerY = Math.Min(23, playerY + 1);
-                    playerMoveDirection = Direction.Down;
-                }
-
-                // 플레이어가 벽에 닿을 때 플레이어는 움직이지 못한다.
+   // 플레이어가 벽에 닿을 때 플레이어는 움직이지 못한다.
                 // 벽의 개수를 다양하게 만들어줬기 때문에, 반복문을 사용합니다.
                 for(int i = 0; i < WALL_COUNT; i++)
                 {
@@ -372,7 +494,4 @@ namespace Sokoban
 
                     break;
                 }
-            }
-        }
-    }
-}
+ */
